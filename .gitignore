@@ -1,0 +1,5 @@
+# Ignore sensitive files and folders
+firebase file/
+*.json
+*.txt
+.env
