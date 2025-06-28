@@ -5,7 +5,10 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "https://online-learning-front.vercel.app", // <-- use your actual frontend Vercel URL
+  credentials: true
+}));
 app.use(express.json());
 
 const users = []; // In-memory user store (replace with DB for production)
