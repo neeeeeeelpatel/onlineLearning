@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 const SignUpPage = () => {
   const [email, setEmail] = useState("");
@@ -13,46 +13,21 @@ const SignUpPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Test function to check Firestore connectivity
-  const testFirestore = async () => {
-    try {
-      console.log("Testing Firestore connectivity...");
-      const testDoc = doc(db, "test", "test");
-      await setDoc(testDoc, { test: "data", timestamp: new Date().toISOString() });
-      console.log("Firestore write test successful");
-      
-      const testRead = await getDoc(testDoc);
-      console.log("Firestore read test successful:", testRead.data());
-      
-      return true;
-    } catch (err) {
-      console.error("Firestore test failed:", err);
-      return false;
-    }
-  };
-
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
     setLoading(true);
-    
+
     try {
       console.log("Creating user with email:", email, "and role:", role);
-      
-      // Test Firestore connectivity first
-      const firestoreWorks = await testFirestore();
-      if (!firestoreWorks) {
-        setError("Firestore is not accessible. Please check your security rules.");
-        return;
-      }
-      
+
       // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       console.log("User created successfully:", user.uid);
-      
+
       // Store user data in Firestore
       const userData = {
         email: email,
@@ -60,16 +35,16 @@ const SignUpPage = () => {
         createdAt: new Date().toISOString(),
         uid: user.uid
       };
-      
+
       console.log("Storing user data in Firestore:", userData);
-      
+
       await setDoc(doc(db, "users", user.uid), userData);
-      
+
       console.log("User data stored successfully in Firestore");
-      
+
       // Also store in localStorage for immediate access
       localStorage.setItem('user', JSON.stringify(userData));
-      
+
       setSuccess("Account created successfully! Redirecting to login...");
       setTimeout(() => {
         navigate("/login");
