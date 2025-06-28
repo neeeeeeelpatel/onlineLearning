@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { validateUser, saveUserData, isLoggedIn } from '../utils/authUtils';
 import { demoUsers } from '../utils/mockData';
+import { auth, db } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -18,25 +21,58 @@ const LoginPage = () => {
     }
   }, [navigate]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      const { isValid, userData } = validateUser(email, password);
-
-      if (isValid) {
-        // Save user data to localStorage
-        saveUserData({ ...userData, id: userData.id });
-        setLoading(false);
-        navigate('/dashboard');
+    
+    try {
+      console.log("Attempting to sign in with email:", email);
+      
+      // Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      console.log("Firebase Auth successful, user UID:", user.uid);
+      
+      // Fetch user data from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      
+      console.log("Firestore document exists:", userDoc.exists());
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("Retrieved user data from Firestore:", userData);
+        
+        // Store user data in localStorage
+        const localStorageData = {
+          uid: user.uid,
+          email: user.email,
+          role: userData.role,
+          createdAt: userData.createdAt
+        };
+        
+        console.log("Storing in localStorage:", localStorageData);
+        localStorage.setItem('user', JSON.stringify(localStorageData));
+        
+        // Redirect based on role
+        if (userData.role === 'instructor') {
+          console.log("Redirecting to instructor dashboard");
+          navigate('/instructor-dashboard');
+        } else {
+          console.log("Redirecting to learner dashboard");
+          navigate('/dashboard');
+        }
       } else {
-        setError('Invalid email or password');
-        setLoading(false);
+        console.error("User document not found in Firestore");
+        setError('User data not found. Please try signing up again.');
       }
-    }, 1000);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError(`Login failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDemoLogin = (userType) => {
@@ -96,25 +132,6 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Role
-              </label>
-              <div className="mt-1">
-                <select
-                  id="role"
-                  name="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                >
-                  <option value="learner">Learner</option>
-                  <option value="instructor">Instructor</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-            </div>
-
             {error && (
               <div className="rounded-md bg-red-50 p-4">
                 <div className="flex">
@@ -171,56 +188,13 @@ const LoginPage = () => {
                 Sign in
               </button>
             </div>
+
+            {/* Add sign up link */}
+            <div className="mt-4 text-center">
+              <span className="text-gray-600">Don't have an account? </span>
+              <a href="/signup" className="text-primary-600 hover:underline font-medium">Sign up</a>
+            </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Demo Accounts</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <div>
-                <button
-                  onClick={() => handleDemoLogin('learner')}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Learner
-                </button>
-              </div>
-
-              <div>
-                <button
-                  onClick={() => handleDemoLogin('instructor')}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Instructor
-                </button>
-              </div>
-
-              <div>
-                <button
-                  onClick={() => handleDemoLogin('admin')}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 bg-gray-50 p-4 rounded-md">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials</h3>
-            <div className="text-xs text-gray-500 space-y-1">
-              <p><strong>Admin:</strong> admin@nex.com / admin123</p>
-              <p><strong>Instructor:</strong> inst@nex.com / inst123</p>
-              <p><strong>Learner:</strong> learn@nex.com / learn123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

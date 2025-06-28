@@ -18,14 +18,14 @@ export const validateUser = (email, password) => {
   return { isValid: false };
 };
 
-// Save user data to localStorage
+// Save user data to localStorage (for Firebase users)
 export const saveUserData = (userData) => {
-  localStorage.setItem('nextraUser', JSON.stringify(userData));
+  localStorage.setItem('user', JSON.stringify(userData));
 };
 
-// Get user data from localStorage
+// Get user data from localStorage (for Firebase users)
 export const getUserData = () => {
-  const userData = localStorage.getItem('nextraUser');
+  const userData = localStorage.getItem('user');
   return userData ? JSON.parse(userData) : null;
 };
 
@@ -36,7 +36,7 @@ export const isLoggedIn = () => {
 
 // Logout user
 export const logoutUser = () => {
-  localStorage.removeItem('nextraUser');
+  localStorage.removeItem('user');
 };
 
 // Get user role
@@ -49,4 +49,34 @@ export const getUserRole = () => {
 export const hasRole = (role) => {
   const userRole = getUserRole();
   return userRole === role;
+};
+
+// Get current user data from localStorage
+export const getCurrentUser = () => {
+  const userStr = localStorage.getItem('user');
+  return userStr ? JSON.parse(userStr) : null;
+};
+
+// Get current user's role
+export const getCurrentUserRole = () => {
+  const user = getCurrentUser();
+  return user ? user.role : null;
+};
+
+// Check if user is an instructor
+export const isInstructor = () => {
+  return getCurrentUserRole() === 'instructor';
+};
+
+// Check if user is a learner
+export const isLearner = () => {
+  return getCurrentUserRole() === 'learner';
+};
+
+// Logout function
+export const logout = () => {
+  localStorage.removeItem('user');
+  // You can also sign out from Firebase Auth here if needed
+  // import { signOut } from 'firebase/auth';
+  // await signOut(auth);
 };

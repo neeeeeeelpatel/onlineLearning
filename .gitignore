@@ -1,5 +1,7 @@
 # Ignore sensitive files and folders
-firebase file/
-*.json
-*.txt
+firebase file/*.json
 .env
+*.txt
+node_modules/
+
+frontend/package.json

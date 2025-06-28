@@ -13,6 +13,7 @@ import CoursePlayer from '../pages/CoursePlayer';
 import QuizInterface from '../pages/QuizInterface';
 import PaymentPage from '../pages/PaymentPage';
 import CertificatePage from '../pages/CertificatePage';
+import SignUpPage from '../pages/SignUpPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -147,6 +148,8 @@ const AppRoutes = () => {
           isLoggedIn() ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
         } 
       />
+      
+      <Route path="/signup" element={<SignUpPage />} />
     </Routes>
   );
 };
