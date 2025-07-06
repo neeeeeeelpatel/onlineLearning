@@ -5,6 +5,39 @@ import { courseService } from '../utils/courseService';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { PlusIcon, TrashIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/solid';
+import { FaCheckCircle, FaRegEdit, FaPlus, FaTrash, FaUpload, FaChevronRight, FaChevronLeft, FaSave, FaEye, FaCloudUploadAlt, FaTag } from 'react-icons/fa';
+
+const TABS = [
+  'Basic Info',
+  'Curriculum',
+  'Requirements',
+  'Pricing',
+];
+
+const defaultCourse = {
+  title: '',
+  description: '',
+  category: '',
+  customCategory: '',
+  thumbnail: null,
+  thumbnailUrl: '',
+  learningOutcomes: [''],
+  requirements: [''],
+  targetAudience: [''],
+  modules: [
+    {
+      name: '',
+      lessons: [
+        { title: '', content: '', quiz: [] },
+      ],
+    },
+  ],
+  price: '',
+  discount: '',
+  status: 'Draft',
+};
+
+const categories = ['Development', 'Design', 'Business', 'Marketing', 'Custom'];
 
 const CourseBuilder = () => {
   const navigate = useNavigate();
@@ -16,8 +49,14 @@ const CourseBuilder = () => {
     }
   }, [navigate]);
   
+  const [tab, setTab] = useState(0);
+  const [course, setCourse] = useState(defaultCourse);
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [error, setError] = useState('');
+  
   // Course state
-  const [course, setCourse] = useState({
+  const [courseState, setCourseState] = useState({
     title: '',
     description: '',
     category: '',
@@ -269,6 +308,181 @@ const CourseBuilder = () => {
     const minutes = totalMinutes % 60;
     return `${hours} hours ${minutes} minutes`;
   };
+
+  // Tab content renderers
+  const renderTab = () => {
+    switch (tab) {
+      case 0:
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block font-semibold mb-1">Course Title</label>
+              <input type="text" className="input" value={course.title} onChange={e => handleInputChange(e)} placeholder="Enter course title" />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Description</label>
+              <textarea className="input" value={course.description} onChange={e => handleInputChange(e)} placeholder="Course description" rows={3} />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Category</label>
+              <select className="input" value={course.category} onChange={e => handleInputChange(e)}>
+                <option value="">Select category</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+              {course.category === 'Custom' && (
+                <input type="text" className="input mt-2" value={course.customCategory} onChange={e => handleInputChange(e)} placeholder="Custom category" />
+              )}
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Thumbnail</label>
+              <input type="file" accept="image/*" onChange={e => handleInputChange(e)} className="block" />
+              {course.thumbnailUrl && <img src={course.thumbnailUrl} alt="Thumbnail preview" className="mt-2 w-32 h-20 object-cover rounded shadow" />}
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="space-y-6">
+            {course.modules.map((mod, mIdx) => (
+              <div key={mIdx} className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <input type="text" className="input flex-1" value={mod.title} onChange={e => handleModuleTitleChange(mIdx, e.target.value)} placeholder={`Module ${mIdx + 1} name`} />
+                  <button className="p-2 rounded hover:bg-red-100" onClick={() => handleRemoveModule(mIdx)} title="Remove module"><FaTrash className="text-red-500" /></button>
+                </div>
+                {/* Lessons */}
+                {mod.lessons.map((lesson, lIdx) => (
+                  <div key={lIdx} className="ml-4 mb-2 bg-white rounded p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <input type="text" className="input flex-1" value={lesson.title} onChange={e => handleLessonChange(mIdx, lIdx, 'title', e.target.value)} placeholder={`Lesson ${lIdx + 1} title`} />
+                      <button className="p-2 rounded hover:bg-red-100" onClick={() => handleRemoveLesson(mIdx, lIdx)} title="Remove lesson"><FaTrash className="text-red-500" /></button>
+                    </div>
+                    <textarea className="input w-full" value={lesson.content} onChange={e => handleLessonChange(mIdx, lIdx, 'content', e.target.value)} placeholder="Lesson content" rows={2} />
+                    {/* Quiz Builder */}
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-xs text-gray-600">Quiz</span>
+                        <button className="p-1 rounded bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs" onClick={() => handleAddLesson(mIdx)}><FaPlus /> Add MCQ</button>
+                      </div>
+                      {lesson.quiz && lesson.quiz.length > 0 && lesson.quiz.map((q, qIdx) => (
+                        <div key={qIdx} className="bg-gray-100 rounded p-2 mb-2">
+                          <input type="text" className="input mb-1" value={q.question} onChange={e => handleQuizChange(mIdx, lIdx, qIdx, 'question', e.target.value)} placeholder="Question" />
+                          <div className="grid grid-cols-2 gap-2 mb-1">
+                            {q.options.map((opt, oIdx) => (
+                              <input key={oIdx} type="text" className="input" value={opt} onChange={e => {
+                                const opts = [...q.options]; opts[oIdx] = e.target.value;
+                                handleQuizChange(mIdx, lIdx, qIdx, 'options', opts);
+                              }} placeholder={`Option ${oIdx + 1}`} />
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <label className="text-xs">Correct:</label>
+                            <select className="input" value={q.correct} onChange={e => handleQuizChange(mIdx, lIdx, qIdx, 'correct', Number(e.target.value))}>
+                              {q.options.map((_, oIdx) => <option key={oIdx} value={oIdx}>{`Option ${oIdx + 1}`}</option>)}
+                            </select>
+                            <label className="text-xs ml-2">Time (sec):</label>
+                            <input type="number" className="input w-20" value={q.time} min={10} max={600} onChange={e => handleQuizChange(mIdx, lIdx, qIdx, 'time', Number(e.target.value))} />
+                          </div>
+                          <button className="p-1 rounded hover:bg-red-100 text-xs text-red-600" onClick={() => handleRemoveQuiz(mIdx, lIdx, qIdx)}><FaTrash /> Remove MCQ</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <button className="mt-2 flex items-center gap-1 px-3 py-1 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded text-sm" onClick={() => handleAddLesson(mIdx)}><FaPlus /> Add Lesson</button>
+              </div>
+            ))}
+            <button className="flex items-center gap-1 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 font-semibold" onClick={handleAddModule}><FaPlus /> Add Module</button>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-6">
+            {/* Learning Outcomes */}
+            <div>
+              <label className="block font-semibold mb-1">Learning Outcomes</label>
+              {course.learningOutcomes.map((out, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <input type="text" className="input flex-1" value={out} onChange={e => handleArrayInputChange('learningOutcomes', idx, e.target.value)} placeholder={`Outcome ${idx + 1}`} />
+                  <button className="p-2 rounded hover:bg-red-100" onClick={() => handleRemoveArrayItem('learningOutcomes', idx)} title="Remove"><FaTrash className="text-red-500" /></button>
+                </div>
+              ))}
+              <button className="flex items-center gap-1 px-3 py-1 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded text-sm" onClick={() => handleAddArrayItem('learningOutcomes')}><FaPlus /> Add Outcome</button>
+            </div>
+            {/* Requirements */}
+            <div>
+              <label className="block font-semibold mb-1">Requirements</label>
+              {course.requirements.map((req, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <input type="text" className="input flex-1" value={req} onChange={e => handleArrayInputChange('requirements', idx, e.target.value)} placeholder={`Requirement ${idx + 1}`} />
+                  <button className="p-2 rounded hover:bg-red-100" onClick={() => handleRemoveArrayItem('requirements', idx)} title="Remove"><FaTrash className="text-red-500" /></button>
+                </div>
+              ))}
+              <button className="flex items-center gap-1 px-3 py-1 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded text-sm" onClick={() => handleAddArrayItem('requirements')}><FaPlus /> Add Requirement</button>
+            </div>
+            {/* Target Audience */}
+            <div>
+              <label className="block font-semibold mb-1">Target Audience</label>
+              {course.targetAudience.map((aud, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <input type="text" className="input flex-1" value={aud} onChange={e => handleArrayInputChange('targetAudience', idx, e.target.value)} placeholder={`Audience ${idx + 1}`} />
+                  <button className="p-2 rounded hover:bg-red-100" onClick={() => handleRemoveArrayItem('targetAudience', idx)} title="Remove"><FaTrash className="text-red-500" /></button>
+                </div>
+              ))}
+              <button className="flex items-center gap-1 px-3 py-1 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded text-sm" onClick={() => handleAddArrayItem('targetAudience')}><FaPlus /> Add Audience</button>
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block font-semibold mb-1">Price (USD)</label>
+              <input type="number" className="input" value={course.price} onChange={e => handleInputChange(e)} placeholder="e.g. 49.99" min={0} />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Discount (%)</label>
+              <input type="number" className="input" value={course.discount} onChange={e => handleInputChange(e)} placeholder="e.g. 20" min={0} max={100} />
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <FaTag className="text-primary-600" />
+              <span className="text-sm text-gray-600">Final Price: <span className="font-bold text-primary-700">${course.price && course.discount ? (course.price * (1 - course.discount / 100)).toFixed(2) : course.price}</span></span>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Quiz builder for lessons
+  const handleQuizChange = (mIdx, lIdx, qIdx, field, value) => {
+    setCourse(prev => {
+      const modules = [...prev.modules];
+      const quiz = [...(modules[mIdx].lessons[lIdx].quiz || [])];
+      quiz[qIdx][field] = value;
+      modules[mIdx].lessons[lIdx].quiz = quiz;
+      return { ...prev, modules };
+    });
+  };
+
+  // Save/Publish/Preview
+  const handleSave = (status) => {
+    setSaving(true);
+    setTimeout(() => {
+      setCourse(prev => ({ ...prev, status }));
+      setSaving(false);
+    }, 800);
+  };
+
+  const handleRemoveQuiz = (mIdx, lIdx, qIdx) => {
+    setCourse(prev => {
+      const modules = [...prev.modules];
+      const quiz = [...(modules[mIdx].lessons[lIdx].quiz || [])];
+      quiz.splice(qIdx, 1);
+      modules[mIdx].lessons[lIdx].quiz = quiz;
+      return { ...prev, modules };
+    });
+  };
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -281,11 +495,12 @@ const CourseBuilder = () => {
           <div className="mb-6 flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-800">Course Builder</h1>
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSave('Draft')}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              disabled={saving}
             >
-              <CheckIcon className="-ml-1 mr-2 h-5 w-5" />
-              Save Course
+              <FaSave className="-ml-1 mr-2 h-5 w-5" />
+              {saving ? 'Saving...' : 'Save Course'}
             </button>
           </div>
           
@@ -293,463 +508,24 @@ const CourseBuilder = () => {
           <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex">
-                {['basic', 'curriculum', 'requirements', 'pricing'].map((tab) => (
+                {TABS.map((t, idx) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`${activeTab === tab
+                    key={t}
+                    onClick={() => setTab(idx)}
+                    className={`${tab === idx
                       ? 'border-primary-500 text-primary-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm capitalize`}
                   >
-                    {tab === 'basic' ? 'Basic Info' : tab}
+                    {t}
                   </button>
                 ))}
               </nav>
             </div>
             
             <div className="p-6">
-              {/* Basic Info Tab */}
-              {activeTab === 'basic' && (
-                <div>
-                  <div className="mb-6">
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Course Title *</label>
-                    <input
-                      type="text"
-                      id="title"
-                      name="title"
-                      value={course.title}
-                      onChange={handleInputChange}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                      placeholder="e.g. Complete Web Development Bootcamp"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Course Description *</label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={course.description}
-                      onChange={handleInputChange}
-                      rows={4}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                      placeholder="Provide a detailed description of your course"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                      <select
-                        id="category"
-                        name="category"
-                        value={course.category}
-                        onChange={handleInputChange}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Select a category</option>
-                        <option value="Web Development">Web Development</option>
-                        <option value="Mobile Development">Mobile Development</option>
-                        <option value="Data Science">Data Science</option>
-                        <option value="Machine Learning">Machine Learning</option>
-                        <option value="DevOps">DevOps</option>
-                        <option value="Business">Business</option>
-                        <option value="Design">Design</option>
-                        <option value="Marketing">Marketing</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="level" className="block text-sm font-medium text-gray-700 mb-1">Level *</label>
-                      <select
-                        id="level"
-                        name="level"
-                        value={course.level}
-                        onChange={handleInputChange}
-                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        required
-                      >
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                        <option value="All Levels">All Levels</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-1">Course Thumbnail URL</label>
-                    <input
-                      type="text"
-                      id="thumbnail"
-                      name="thumbnail"
-                      value={course.thumbnail}
-                      onChange={handleInputChange}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                      placeholder="https://example.com/thumbnail.jpg"
-                    />
-                    {course.thumbnail && (
-                      <div className="mt-2">
-                        <img 
-                          src={course.thumbnail} 
-                          alt="Course thumbnail preview" 
-                          className="h-40 object-cover rounded-md"
-                          onError={(e) => e.target.src = 'https://via.placeholder.com/640x360?text=Thumbnail+Preview'}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Learning Outcomes</label>
-                    <p className="text-sm text-gray-500 mb-4">What will students learn in your course?</p>
-                    
-                    {course.learningOutcomes.map((outcome, index) => (
-                      <div key={index} className="flex items-center mb-2">
-                        <input
-                          type="text"
-                          value={outcome}
-                          onChange={(e) => handleArrayInputChange('learningOutcomes', index, e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                          placeholder={`Outcome ${index + 1}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveArrayItem('learningOutcomes', index)}
-                          className="ml-2 text-gray-400 hover:text-red-500"
-                          disabled={course.learningOutcomes.length === 1}
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    ))}
-                    
-                    <button
-                      type="button"
-                      onClick={() => handleAddArrayItem('learningOutcomes')}
-                      className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      <PlusIcon className="-ml-1 mr-1 h-5 w-5" />
-                      Add Learning Outcome
-                    </button>
-                  </div>
-                </div>
-              )}
-              
-              {/* Curriculum Tab */}
-              {activeTab === 'curriculum' && (
-                <div>
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-lg font-medium text-gray-900">Course Modules</h2>
-                      <button
-                        type="button"
-                        onClick={handleAddModule}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        <PlusIcon className="-ml-1 mr-1 h-5 w-5" />
-                        Add Module
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Module List */}
-                      <div className="bg-gray-50 p-4 rounded-md">
-                        <h3 className="text-sm font-medium text-gray-700 mb-3">Modules</h3>
-                        <ul className="space-y-2">
-                          {course.modules.map((module, moduleIndex) => (
-                            <li key={moduleIndex}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveModuleIndex(moduleIndex);
-                                  setActiveLessonIndex(0);
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-md ${activeModuleIndex === moduleIndex ? 'bg-primary-100 text-primary-700' : 'hover:bg-gray-100'}`}
-                              >
-                                <div className="flex justify-between items-center">
-                                  <span className="font-medium truncate">{module.title}</span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveModule(moduleIndex);
-                                    }}
-                                    className="text-gray-400 hover:text-red-500"
-                                  >
-                                    <TrashIcon className="h-4 w-4" />
-                                  </button>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">{module.lessons.length} lessons</div>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      {/* Module Editor */}
-                      <div className="lg:col-span-2">
-                        <div className="bg-white border border-gray-200 rounded-md p-4">
-                          <div className="mb-4">
-                            <label htmlFor="moduleTitle" className="block text-sm font-medium text-gray-700 mb-1">Module Title</label>
-                            <input
-                              type="text"
-                              id="moduleTitle"
-                              value={course.modules[activeModuleIndex].title}
-                              onChange={(e) => handleModuleTitleChange(activeModuleIndex, e.target.value)}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                          </div>
-                          
-                          <div className="mb-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="text-sm font-medium text-gray-700">Lessons</h4>
-                              <button
-                                type="button"
-                                onClick={() => handleAddLesson(activeModuleIndex)}
-                                className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                              >
-                                <PlusIcon className="-ml-1 mr-1 h-4 w-4" />
-                                Add Lesson
-                              </button>
-                            </div>
-                            
-                            <ul className="space-y-2 mb-4">
-                              {course.modules[activeModuleIndex].lessons.map((lesson, lessonIndex) => (
-                                <li key={lessonIndex}>
-                                  <button
-                                    type="button"
-                                    onClick={() => setActiveLessonIndex(lessonIndex)}
-                                    className={`w-full text-left px-3 py-2 rounded-md ${activeLessonIndex === lessonIndex ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                                  >
-                                    <div className="flex justify-between items-center">
-                                      <span className="truncate">{lesson.title}</span>
-                                      <div className="flex items-center">
-                                        <span className="text-xs text-gray-500 mr-2">{lesson.type}</span>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRemoveLesson(activeModuleIndex, lessonIndex);
-                                          }}
-                                          className="text-gray-400 hover:text-red-500"
-                                        >
-                                          <TrashIcon className="h-4 w-4" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          
-                          {/* Lesson Editor */}
-                          <div className="border-t border-gray-200 pt-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-3">Lesson Details</h4>
-                            
-                            <div className="mb-4">
-                              <label htmlFor="lessonTitle" className="block text-sm font-medium text-gray-700 mb-1">Lesson Title</label>
-                              <input
-                                type="text"
-                                id="lessonTitle"
-                                value={course.modules[activeModuleIndex].lessons[activeLessonIndex].title}
-                                onChange={(e) => handleLessonChange(activeModuleIndex, activeLessonIndex, 'title', e.target.value)}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                              />
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <div>
-                                <label htmlFor="lessonType" className="block text-sm font-medium text-gray-700 mb-1">Lesson Type</label>
-                                <select
-                                  id="lessonType"
-                                  value={course.modules[activeModuleIndex].lessons[activeLessonIndex].type}
-                                  onChange={(e) => handleLessonChange(activeModuleIndex, activeLessonIndex, 'type', e.target.value)}
-                                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                                >
-                                  <option value="video">Video</option>
-                                  <option value="quiz">Quiz</option>
-                                  <option value="assignment">Assignment</option>
-                                  <option value="text">Text</option>
-                                </select>
-                              </div>
-                              
-                              <div>
-                                <label htmlFor="lessonDuration" className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
-                                <input
-                                  type="text"
-                                  id="lessonDuration"
-                                  value={course.modules[activeModuleIndex].lessons[activeLessonIndex].duration}
-                                  onChange={(e) => handleLessonChange(activeModuleIndex, activeLessonIndex, 'duration', e.target.value)}
-                                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                                  placeholder="HH:MM:SS"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <label htmlFor="lessonContent" className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-                              <textarea
-                                id="lessonContent"
-                                value={course.modules[activeModuleIndex].lessons[activeLessonIndex].content}
-                                onChange={(e) => handleLessonChange(activeModuleIndex, activeLessonIndex, 'content', e.target.value)}
-                                rows={4}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                                placeholder={course.modules[activeModuleIndex].lessons[activeLessonIndex].type === 'video' ? 'Video URL' : 'Lesson content'}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Requirements Tab */}
-              {activeTab === 'requirements' && (
-                <div>
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Requirements</label>
-                    <p className="text-sm text-gray-500 mb-4">What are the prerequisites for taking this course?</p>
-                    
-                    {course.requirements.map((requirement, index) => (
-                      <div key={index} className="flex items-center mb-2">
-                        <input
-                          type="text"
-                          value={requirement}
-                          onChange={(e) => handleArrayInputChange('requirements', index, e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                          placeholder={`Requirement ${index + 1}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveArrayItem('requirements', index)}
-                          className="ml-2 text-gray-400 hover:text-red-500"
-                          disabled={course.requirements.length === 1}
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    ))}
-                    
-                    <button
-                      type="button"
-                      onClick={() => handleAddArrayItem('requirements')}
-                      className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      <PlusIcon className="-ml-1 mr-1 h-5 w-5" />
-                      Add Requirement
-                    </button>
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Target Audience</label>
-                    <p className="text-sm text-gray-500 mb-4">Who is this course for?</p>
-                    
-                    {course.targetAudience.map((audience, index) => (
-                      <div key={index} className="flex items-center mb-2">
-                        <input
-                          type="text"
-                          value={audience}
-                          onChange={(e) => handleArrayInputChange('targetAudience', index, e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                          placeholder={`Target Audience ${index + 1}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveArrayItem('targetAudience', index)}
-                          className="ml-2 text-gray-400 hover:text-red-500"
-                          disabled={course.targetAudience.length === 1}
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    ))}
-                    
-                    <button
-                      type="button"
-                      onClick={() => handleAddArrayItem('targetAudience')}
-                      className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                      <PlusIcon className="-ml-1 mr-1 h-5 w-5" />
-                      Add Target Audience
-                    </button>
-                  </div>
-                </div>
-              )}
-              
-              {/* Pricing Tab */}
-              {activeTab === 'pricing' && (
-                <div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Regular Price (₹) *</label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500 sm:text-sm">₹</span>
-                        </div>
-                        <input
-                          type="number"
-                          id="price"
-                          name="price"
-                          value={course.price}
-                          onChange={handleInputChange}
-                          className="block w-full pl-7 pr-12 rounded-md border-gray-300 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="discountPrice" className="block text-sm font-medium text-gray-700 mb-1">Discount Price (₹)</label>
-                      <div className="mt-1 relative rounded-md shadow-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500 sm:text-sm">₹</span>
-                        </div>
-                        <input
-                          type="number"
-                          id="discountPrice"
-                          name="discountPrice"
-                          value={course.discountPrice}
-                          onChange={handleInputChange}
-                          className="block w-full pl-7 pr-12 rounded-md border-gray-300 focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                      <p className="mt-2 text-sm text-gray-500">Leave empty if no discount</p>
-                    </div>
-                  </div>
-                  
-                  {course.price && course.discountPrice && parseFloat(course.discountPrice) < parseFloat(course.price) && (
-                    <div className="mt-4 p-4 bg-green-50 rounded-md">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-green-800">Discount Applied</h3>
-                          <div className="mt-2 text-sm text-green-700">
-                            <p>You're offering a {Math.round(((parseFloat(course.price) - parseFloat(course.discountPrice)) / parseFloat(course.price)) * 100)}% discount on this course.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Tab Content */}
+              {renderTab()}
             </div>
           </div>
         </div>

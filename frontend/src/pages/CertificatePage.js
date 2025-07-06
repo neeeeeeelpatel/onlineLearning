@@ -105,7 +105,7 @@ const CertificatePage = () => {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
       </div>
     );
@@ -113,13 +113,13 @@ const CertificatePage = () => {
   
   if (!course || !user) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800">Certificate not available</h2>
           <p className="mt-2 text-gray-600">The certificate you're looking for doesn't exist or you haven't completed this course yet.</p>
           <button 
             onClick={() => navigate('/dashboard')} 
-            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="mt-4 inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded font-bold shadow hover:from-orange-600 hover:to-purple-700 transition"
           >
             Back to Dashboard
           </button>
@@ -129,7 +129,7 @@ const CertificatePage = () => {
   }
   
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100">
       <Navbar />
       
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -140,7 +140,7 @@ const CertificatePage = () => {
           <div className="flex space-x-2">
             <button
               onClick={handleDownload}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded font-bold shadow hover:from-orange-600 hover:to-purple-700 transition"
             >
               <DownloadIcon className="-ml-1 mr-2 h-5 w-5" />
               Download
@@ -148,7 +148,7 @@ const CertificatePage = () => {
             
             <button
               onClick={handlePrint}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded font-bold shadow hover:from-orange-600 hover:to-purple-700 transition"
             >
               <PrinterIcon className="-ml-1 mr-2 h-5 w-5" />
               Print
@@ -156,7 +156,7 @@ const CertificatePage = () => {
             
             <button
               onClick={handleShare}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded font-bold shadow hover:from-orange-600 hover:to-purple-700 transition"
             >
               <ShareIcon className="-ml-1 mr-2 h-5 w-5" />
               Share
@@ -167,11 +167,12 @@ const CertificatePage = () => {
         {/* Certificate */}
         <div 
           ref={certificateRef} 
-          className="bg-white border-8 border-double border-gray-300 p-8 shadow-lg max-w-4xl mx-auto print:border-8 print:border-double print:border-gray-300 print:shadow-none print:p-8"
+          className="bg-white border-8 border-double p-8 shadow-lg max-w-4xl mx-auto rounded-xl print:border-8 print:border-double print:border-gray-300 print:shadow-none print:p-8"
+          style={{ borderImage: 'linear-gradient(to bottom right, #FF6A00, #7F00FF) 1' }}
         >
           <div className="text-center">
             <div className="mb-6">
-              <h1 className="text-4xl font-bold text-primary-600 font-serif">Nextra</h1>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-purple-600 bg-clip-text text-transparent font-serif">Nextra</h1>
               <p className="text-lg text-gray-600">E-Learning Excellence</p>
             </div>
             
@@ -182,7 +183,7 @@ const CertificatePage = () => {
             
             <p className="text-gray-600 mb-8">has successfully completed the course</p>
             
-            <h4 className="text-2xl font-bold text-primary-600 mb-8">{course.title}</h4>
+            <h4 className="text-2xl font-bold text-purple-600 mb-8">{course.title}</h4>
             
             <div className="flex justify-center items-center mb-8">
               <div className="w-1/3 border-t border-gray-300"></div>

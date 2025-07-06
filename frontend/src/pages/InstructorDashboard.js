@@ -4,21 +4,23 @@ import { getUserData, hasRole } from '../utils/authUtils';
 import { courseService } from '../utils/courseService';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { PlusIcon, EyeIcon, PencilIcon, TrashIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { FaBook, FaCheckCircle, FaRegEdit, FaUsers, FaPlus, FaCloudUploadAlt, FaLightbulb } from 'react-icons/fa';
 
 const InstructorDashboard = () => {
   const navigate = useNavigate();
+  const user = getUserData();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [stats, setStats] = useState(null);
+  const [recentCourses, setRecentCourses] = useState([]);
   
-  // Check if user is an instructor
   useEffect(() => {
     if (!hasRole('instructor')) {
       navigate('/dashboard');
     }
   }, [navigate]);
   
-  // Load instructor's courses
   useEffect(() => {
     const userData = getUserData();
     if (userData) {
@@ -28,248 +30,136 @@ const InstructorDashboard = () => {
     setLoading(false);
   }, []);
   
-  // Handle course deletion
-  const handleDeleteCourse = (courseId) => {
-    if (window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
-      courseService.deleteCourse(courseId);
-      setCourses(courses.filter(course => course.id !== courseId));
-    }
-  };
-  
-  // Handle course publishing
-  const handlePublishCourse = (courseId) => {
-    const updatedCourse = courseService.publishCourse(courseId);
-    if (updatedCourse) {
-      setCourses(courses.map(course => 
-        course.id === courseId ? updatedCourse : course
-      ));
-    }
-  };
-  
-  // Handle course unpublishing
-  const handleUnpublishCourse = (courseId) => {
-    const updatedCourse = courseService.updateCourse(courseId, {
-      status: 'draft',
-      isPublished: false
-    });
-    if (updatedCourse) {
-      setCourses(courses.map(course => 
-        course.id === courseId ? updatedCourse : course
-      ));
-    }
-  };
-  
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100">
         <Navbar />
-        <div className="flex">
           <Sidebar />
-          <div className="flex-1 p-6 md:ml-64">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-300 rounded w-1/4 mb-4"></div>
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-32 bg-gray-300 rounded"></div>
-                ))}
+        <div className="ml-64 p-8">Loading...</div>
               </div>
-            </div>
-          </div>
-        </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100">
+        <Navbar />
+        <Sidebar />
+        <div className="ml-64 p-8 text-red-600">{error}</div>
       </div>
     );
   }
+
+  const safeStats = stats || [];
+  const instructorName = user?.name || user?.email?.split('@')[0] || 'Instructor';
   
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-100">
       <Navbar />
-      
       <div className="flex">
         <Sidebar />
-        
-        <div className="flex-1 p-6 md:ml-64">
-          {/* Header */}
-          <div className="mb-6 flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">My Courses</h1>
-              <p className="text-gray-600 mt-2">Manage your courses and track their performance</p>
-            </div>
-            <Link
-              to="/course-builder"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-              Create New Course
-            </Link>
+        <main className="flex-1 p-4 md:p-8 pt-24 md:pt-20">
+          {/* Welcome Message */}
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-800 text-center md:text-left">
+              Welcome back, <span className="bg-gradient-to-r from-orange-500 to-purple-600 bg-clip-text text-transparent">{instructorName} 👋</span>
+            </h1>
           </div>
-          
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
+          {/* Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            {safeStats.length > 0 ? safeStats.map((stat, idx) => (
+              <div key={stat.label} className="bg-white rounded-xl shadow-md flex items-center gap-4 p-6 border-l-4" style={{ borderImage: idx % 2 === 0 ? 'linear-gradient(to bottom, #FF6A00, #7F00FF) 1' : 'linear-gradient(to bottom, #7F00FF, #FF6A00) 1' }}>
+                <div>{stat.icon}</div>
+                <div>
+                  <div className="text-2xl font-bold text-slate-800">{stat.value}</div>
+                  <div className="text-sm font-semibold">
+                    {stat.label.includes('Courses') && <span className="text-orange-500">{stat.label}</span>}
+                    {stat.label.includes('Students') && <span className="text-purple-600">{stat.label}</span>}
+                    {!stat.label.includes('Courses') && !stat.label.includes('Students') && <span className="text-slate-600">{stat.label}</span>}
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Courses</p>
-                  <p className="text-2xl font-semibold text-gray-900">{courses.length}</p>
                 </div>
               </div>
+            )) : (
+              <div className="col-span-4 text-center text-gray-400 italic">No stats available.</div>
+            )}
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Published</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {courses.filter(course => course.isPublished).length}
-                  </p>
-                </div>
-              </div>
+          {/* Recent Courses Table */}
+          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl md:text-2xl font-bold text-slate-800">
+                <span className="text-orange-500">Recent</span> <span className="text-purple-600">Courses</span>
+              </h2>
+              <Link to="/instructor/course-builder" className="bg-gradient-to-r from-orange-500 to-orange-400 text-white font-bold px-5 py-2 rounded-lg shadow hover:from-orange-600 hover:to-orange-500 transition-all">
+                <FaPlus className="inline mr-2" /> Create New Course
+              </Link>
             </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Drafts</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {courses.filter(course => !course.isPublished).length}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Students</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {courses.reduce((total, course) => total + (course.students || 0), 0)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Courses List */}
-          {courses.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Your Courses</h2>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {courses.map(course => (
-                  <div key={course.id} className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="h-16 w-24 object-cover rounded-lg"
-                          onError={(e) => e.target.src = 'https://via.placeholder.com/96x64?text=Course'}
-                        />
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">{course.title}</h3>
-                          <p className="text-sm text-gray-500">{course.category} • {course.level}</p>
-                          <div className="flex items-center mt-1">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              course.isPublished 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {course.isPublished ? 'Published' : 'Draft'}
-                            </span>
-                            <span className="ml-2 text-sm text-gray-500">
-                              {course.students || 0} students • {course.rating || 0} rating
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Link
-                          to={`/course/${course.id}`}
-                          className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                          <EyeIcon className="h-4 w-4 mr-1" />
-                          View
-                        </Link>
-                        
-                        <Link
-                          to={`/course-builder/edit/${course.id}`}
-                          className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                          <PencilIcon className="h-4 w-4 mr-1" />
-                          Edit
-                        </Link>
-                        
-                        {course.isPublished ? (
-                          <button
-                            onClick={() => handleUnpublishCourse(course.id)}
-                            className="inline-flex items-center px-3 py-1 border border-yellow-300 shadow-sm text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100"
-                          >
-                            <XMarkIcon className="h-4 w-4 mr-1" />
-                            Unpublish
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handlePublishCourse(course.id)}
-                            className="inline-flex items-center px-3 py-1 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100"
-                          >
-                            <CheckIcon className="h-4 w-4 mr-1" />
-                            Publish
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => handleDeleteCourse(course.id)}
-                          className="inline-flex items-center px-3 py-1 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
-                        >
-                          <TrashIcon className="h-4 w-4 mr-1" />
-                          Delete
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr className="text-slate-400 text-sm">
+                    <th className="py-2 px-4">Title</th>
+                    <th className="py-2 px-4">Status</th>
+                    <th className="py-2 px-4">Students</th>
+                    <th className="py-2 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentCourses.length > 0 ? recentCourses.map(course => (
+                    <tr key={course.id} className="border-t border-slate-100">
+                      <td className="py-2 px-4 font-semibold text-slate-800">{course.title}</td>
+                      <td className="py-2 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${course.status === 'Published' ? 'bg-gradient-to-r from-orange-100 to-purple-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}>{course.status}</span>
+                      </td>
+                      <td className="py-2 px-4 text-slate-700">{course.students}</td>
+                      <td className="py-2 px-4 space-x-2">
+                        <Link to={`/instructor/course-builder/edit/${course.id}`} className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-orange-500 hover:underline">Edit</Link>
+                        <Link to={`/course/${course.id}`} className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-purple-600 hover:underline">View</Link>
+                        <button className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-orange-500 hover:underline">
+                          {course.status === 'Published' ? 'Unpublish' : 'Publish'}
                         </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="4" className="text-center text-gray-400 italic py-4">No recent courses found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          ) : (
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </div>
+          {/* Chart & Quick Tip */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6 flex flex-col items-center justify-center min-h-[200px] w-full">
+              <h3 className="text-lg font-bold mb-2 text-slate-800">Enrollment Trends</h3>
+              {/* Simple SVG Line Chart */}
+              <svg width="100%" height="100" viewBox="0 0 320 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polyline
+                  fill="none"
+                  stroke="#7F00FF"
+                  strokeWidth="3"
+                  points="0,80 40,60 80,65 120,40 160,20 200,30 240,10 280,30 320,20"
+                />
+                <polyline
+                  fill="none"
+                  stroke="#FF6A00"
+                  strokeWidth="3"
+                  points="0,90 40,80 80,85 120,70 160,60 200,65 240,50 280,60 320,55"
+                />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No courses yet</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by creating your first course.</p>
-              <div className="mt-6">
-                <Link
-                  to="/course-builder"
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-                >
-                  <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-                  Create Course
-                </Link>
-              </div>
+              <div className="text-xs text-slate-500 mt-2">Purple: This Month &nbsp;|&nbsp; Orange: Last Month</div>
             </div>
-          )}
+            {/* Smart Tip */}
+            <div className="bg-gradient-to-br from-orange-50 via-white to-purple-100 border-l-4 border-orange-400 rounded-xl shadow-md p-6 flex flex-col items-start justify-center min-h-[200px] w-full">
+              <div className="flex items-center gap-2 mb-2">
+                <FaLightbulb className="text-yellow-400 text-xl" />
+                <span className="font-semibold text-orange-600">Smart Tip</span>
+              </div>
+              <div className="text-slate-700">Engage your students by adding quizzes and interactive content to your courses!</div>
+            </div>
         </div>
+        </main>
       </div>
     </div>
   );

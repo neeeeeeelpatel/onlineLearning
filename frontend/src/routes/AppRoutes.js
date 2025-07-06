@@ -14,6 +14,12 @@ import QuizInterface from '../pages/QuizInterface';
 import PaymentPage from '../pages/PaymentPage';
 import CertificatePage from '../pages/CertificatePage';
 import SignUpPage from '../pages/SignUpPage';
+import LandingPage from '../pages/LandingPage';
+import InstructorMyCourses from '../pages/instructor/InstructorMyCourses';
+import InstructorCourseBuilder from '../pages/instructor/InstructorCourseBuilder';
+import InstructorStudents from '../pages/instructor/InstructorStudents';
+import InstructorAnalytics from '../pages/instructor/InstructorAnalytics';
+import InstructorAccountSettings from '../pages/InstructorAccountSettings';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -42,7 +48,7 @@ const AppRoutes = () => {
       
       {/* Protected Routes for all authenticated users */}
       <Route 
-        path="/dashboard" 
+        path="/*" 
         element={
           <ProtectedRoute>
             <Dashboard />
@@ -56,6 +62,51 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['instructor', 'admin']}>
             <InstructorDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/instructor/my-courses" 
+        element={
+          <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+            <InstructorMyCourses />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/instructor/course-builder" 
+        element={
+          <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+            <InstructorCourseBuilder />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/instructor/students" 
+        element={
+          <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+            <InstructorStudents />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/instructor/analytics" 
+        element={
+          <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+            <InstructorAnalytics />
+          </ProtectedRoute>
+        } 
+      />
+      
+      <Route 
+        path="/instructor/account-settings" 
+        element={
+          <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+            <InstructorAccountSettings />
           </ProtectedRoute>
         } 
       />
@@ -133,12 +184,10 @@ const AppRoutes = () => {
         } 
       />
       
-      {/* Redirect root to login or dashboard based on auth status */}
+      {/* Landing Page Route (Public) */}
       <Route 
         path="/" 
-        element={
-          isLoggedIn() ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
-        } 
+        element={<LandingPage />} 
       />
       
       {/* Catch all - redirect to dashboard or login */}
